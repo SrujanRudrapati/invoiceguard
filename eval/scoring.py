@@ -2,7 +2,7 @@
 
 import math
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 from statistics import mean
@@ -28,6 +28,7 @@ class DocRecord:
     latency_ms: float
     usd: float
     escalated: bool
+    predicted: dict = field(default_factory=dict)
 
 
 def norm_value(value: object) -> str | None:

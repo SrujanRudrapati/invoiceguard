@@ -6,19 +6,37 @@ Usage: uv run python eval/run_eval.py --system baseline [--tag v0]
 import argparse
 import json
 import subprocess
+from collections.abc import Callable
 from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
 
 from scoring import DocRecord, aggregate, score_fields
 
-from invoiceguard.config import DATA_DIR, HISTORY_PATH, LABELS_PATH, REVIEWED_LABELS_PATH, RUNS_DIR
-from invoiceguard.pipeline import DocResult, Extractor, baseline_extractor, run_document
+from invoiceguard.config import (
+    DATA_DIR,
+    HAIKU_MODEL,
+    HISTORY_PATH,
+    LABELS_PATH,
+    REVIEWED_LABELS_PATH,
+    RUNS_DIR,
+)
+from invoiceguard.pipeline import (
+    DocResult,
+    Extractor,
+    baseline_extractor,
+    llm_extractor,
+    run_document,
+)
 from invoiceguard.schema import LabelRow
 
-SYSTEMS: dict[str, Extractor] = {"baseline": baseline_extractor}
-PLANNED_SYSTEMS = ("haiku", "sonnet", "cascade")
-SYSTEM_MODELS = {"baseline": "regex"}
+# Built lazily so `baseline` never needs an API key.
+SYSTEMS: dict[str, Callable[[], Extractor]] = {
+    "baseline": lambda: baseline_extractor,
+    "haiku": lambda: llm_extractor(HAIKU_MODEL),
+}
+PLANNED_SYSTEMS = ("sonnet", "cascade")
+SYSTEM_MODELS = {"baseline": "regex", "haiku": HAIKU_MODEL}
 HISTORY_KEYS = (
     "field_acc", "line_item_acc", "doc_exact", "review_recall", "reject_acc", "auto_approve",
     "grounding", "escalation_rate", "p50_ms", "p95_ms", "usd_per_doc", "n_docs",
@@ -48,6 +66,7 @@ def to_record(label: LabelRow, result: DocResult) -> DocRecord:
         items_matched=matched, items_total=total, exact=exact, grounded=result.grounded,
         latency_ms=result.latency_ms, usd=result.extraction.usd,
         escalated=result.extraction.escalated,
+        predicted=result.extraction.invoice.values().model_dump(mode="json"),
     )
 
 
@@ -102,7 +121,7 @@ def main() -> None:
         raise SystemExit(f"--system {args.system} is not implemented yet")
 
     gold, reviewed = load_labels(LABELS_PATH), load_labels(REVIEWED_LABELS_PATH)
-    records, _ = evaluate(SYSTEMS[args.system], gold + reviewed, DATA_DIR)
+    records, _ = evaluate(SYSTEMS[args.system](), gold + reviewed, DATA_DIR)
     main_metrics = aggregate([r for r in records if r.source == "synthetic"])
     reviewed_metrics = aggregate([r for r in records if r.source == "reviewer"])
     run_path = write_outputs(args.system, args.tag, records, main_metrics)

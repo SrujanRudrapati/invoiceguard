@@ -101,3 +101,34 @@ class LabelRow(Strict):
     expected_route: Route
     defects: tuple[str, ...] = ()
     fields: InvoiceFields
+
+
+# ---------- model-facing tool schema ----------
+# Plain strings only: strict tool schemas reject string constraints such as the `pattern`
+# pydantic emits for Decimal. Every field is required (null allowed) as strict mode needs.
+
+
+class LLMField(Strict):
+    value: str | None
+    evidence: str | None
+
+
+class LLMLineItem(Strict):
+    description: str
+    quantity: str
+    unit_price: str
+    amount: str
+
+
+class LLMInvoice(Strict):
+    doc_type: DocType
+    vendor_name: LLMField
+    invoice_number: LLMField
+    invoice_date: LLMField
+    due_date: LLMField
+    po_number: LLMField
+    currency: LLMField
+    subtotal: LLMField
+    tax: LLMField
+    total: LLMField
+    line_items: list[LLMLineItem]
