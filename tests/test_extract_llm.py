@@ -123,3 +123,8 @@ def test_every_call_is_logged_with_tokens_and_cost(model_call_log):
     record = json.loads(line)
     assert record["model"] == MODEL and record["input_tokens"] == 1000
     assert record["output_tokens"] == 200 and record["usd"] > 0 and "latency_ms" in record
+
+
+def test_prompt_treats_credit_notes_as_billing_documents():
+    assert "credit notes" in extract_llm.SYSTEM_PROMPT
+    assert "report them negative" in extract_llm.SYSTEM_PROMPT

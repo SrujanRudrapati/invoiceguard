@@ -104,9 +104,11 @@ def aggregate(records: list[DocRecord]) -> dict:
         "line_item_acc": ratio(sum(r.items_matched for r in records),
                                sum(r.items_total for r in records)),
         "doc_exact": ratio(sum(r.exact for r in records), len(records)),
-        "review_caught": sum(r.pred_route != "approve" for r in review),
+        # strict: a gold-review doc counts as caught only if routed to review; rejecting it
+        # discards it (e.g. a credit note owed to us), so reject is a miss too.
+        "review_caught": sum(r.pred_route == "review" for r in review),
         "review_n": len(review),
-        "review_recall": ratio(sum(r.pred_route != "approve" for r in review), len(review)),
+        "review_recall": ratio(sum(r.pred_route == "review" for r in review), len(review)),
         "reject_acc": ratio(sum(r.pred_route == "reject" for r in reject), len(reject)),
         "auto_approve": ratio(sum(r.pred_route == "approve" for r in records), len(records)),
         "grounding": ratio(sum(grounded), len(grounded)),

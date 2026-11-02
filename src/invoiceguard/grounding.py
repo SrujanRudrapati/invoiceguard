@@ -8,6 +8,7 @@ Anything else is unverified.
 Slash dates (10/05/2026) are read in the order the document itself proves: if any slash date on
 the page has a part > 12, that order applies to all of them. If none does, an ambiguous date is
 unverified with its own reason and is not escalated, because the ambiguity is in the document.
+The decimal mark is resolved the same way: comma only if every money token on the page says so.
 """
 
 import re
@@ -86,6 +87,8 @@ def evidence_boxes(doc: Document, quote: str | None) -> tuple[Box, ...]:
 
 
 NUMBER = re.compile(r"\d[\d,]*(?:\.\d+)?")
+NUMBER_COMMA = re.compile(r"\d[\d.]*(?:,\d+)?")
+MONEY_TOKEN = re.compile(r"\d{1,3}(?:[.,]\d{3})*[.,]\d{2}(?!\d)")
 SLASH_DATE = re.compile(r"\b(\d{1,2})/(\d{1,2})/(\d{4})\b")
 SLASH_FORMATS = {"MDY": ("%m/%d/%Y",), "DMY": ("%d/%m/%Y",), None: ("%m/%d/%Y", "%d/%m/%Y")}
 DATE_PATTERNS = (
@@ -96,17 +99,40 @@ DATE_PATTERNS = (
 
 
 @dataclass(frozen=True)
+class PageFormat:
+    """Conventions resolved once per document from the document itself."""
+
+    date_order: str | None  # MDY, DMY, or None when every slash date is ambiguous
+    decimal: str  # "." or ","
+
+
+def page_format(text: str) -> PageFormat:
+    return PageFormat(date_order=slash_order(text), decimal=decimal_mark(text))
+
+
+@dataclass(frozen=True)
 class Verification:
     verified: bool
     reason: str | None = None
     ambiguous: bool = False  # ambiguity is in the document; a stronger model cannot fix it
 
 
-def numbers_in(quote: str) -> set[Decimal]:
+def decimal_mark(text: str) -> str:
+    """"," only when every money-shaped token on the page proves a decimal comma, else ".".
+
+    A token proves its mark by ending in a separator plus exactly two digits: 1.706,46 or
+    89,50 -> ","; 1,540.00 or 220.00 -> ".".
+    """
+    marks = {token[-3] for token in MONEY_TOKEN.findall(text)}
+    return "," if marks == {","} else "."
+
+
+def numbers_in(quote: str, mark: str = ".") -> set[Decimal]:
+    pattern, thousands = (NUMBER_COMMA, ".") if mark == "," else (NUMBER, ",")
     found = set()
-    for raw in NUMBER.findall(quote):
+    for raw in pattern.findall(quote):
         try:
-            found.add(Decimal(raw.replace(",", "")))
+            found.add(Decimal(raw.replace(thousands, "").replace(mark, ".")))
         except InvalidOperation:
             continue
     return found
@@ -149,31 +175,33 @@ def dates_in(quote: str, order: str | None = None) -> set[date]:
     return found | slash
 
 
-def value_matches_quote(value: object, quote: str, order: str | None = None) -> bool:
+def value_matches_quote(value: object, quote: str, fmt: PageFormat | None = None) -> bool:
+    fmt = fmt or PageFormat(date_order=None, decimal=".")
     if isinstance(value, Decimal):
-        return value in numbers_in(quote)  # Decimal equality is numeric: 6447 == 6447.00
+        return value in numbers_in(quote, fmt.decimal)  # numeric: 6447 == 6447.00
     if isinstance(value, date):
-        return value in dates_in(quote, order)
+        return value in dates_in(quote, fmt.date_order)
     return normalize(str(value)) in normalize(quote)
 
 
-def verify_field(doc: Document, name: str, field: Extracted, order: str | None) -> Verification:
+def verify_field(doc: Document, name: str, field: Extracted, fmt: PageFormat) -> Verification:
     label = FIELD_LABELS[name].capitalize()
     unverified = Verification(False, f"{label} could not be verified against the document")
     if not field.evidence or locate(doc.text, field.evidence) is None:
         return unverified
-    if isinstance(field.value, date) and (raw := ambiguous_slash_dates(field.evidence, order)):
+    if isinstance(field.value, date) and (
+            raw := ambiguous_slash_dates(field.evidence, fmt.date_order)):
         return Verification(False, f"Ambiguous date {raw[0]} (MM/DD or DD/MM)", ambiguous=True)
-    if not value_matches_quote(field.value, field.evidence, order):
+    if not value_matches_quote(field.value, field.evidence, fmt):
         return unverified
     return Verification(True)
 
 
 def verify_invoice(doc: Document, invoice: Invoice) -> dict[str, Verification]:
-    """One Verification per non-null scalar field. Slash-date order is resolved per document."""
-    order = slash_order(doc.text)
+    """One Verification per non-null scalar field; date order and decimal mark from the page."""
+    fmt = page_format(doc.text)
     return {
-        name: verify_field(doc, name, field, order)
+        name: verify_field(doc, name, field, fmt)
         for name in SCALAR_FIELDS
         if (field := getattr(invoice, name)).value is not None
     }
@@ -182,7 +210,7 @@ def verify_invoice(doc: Document, invoice: Invoice) -> dict[str, Verification]:
 def is_verified(doc: Document, field: Extracted, name: str = "total") -> bool:
     if field.value is None:
         return False
-    return verify_field(doc, name, field, slash_order(doc.text)).verified
+    return verify_field(doc, name, field, page_format(doc.text)).verified
 
 
 def grounding_flags(doc: Document, invoice: Invoice) -> dict[str, bool]:

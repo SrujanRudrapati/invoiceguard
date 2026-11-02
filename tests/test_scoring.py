@@ -53,16 +53,17 @@ def test_percentile_nearest_rank():
     assert percentile(values, 95) == 19.0
 
 
-def test_review_recall_counts_review_docs_not_auto_approved():
+def test_review_recall_is_strict_reject_of_a_review_doc_is_a_miss():
     records = [
+        replace(RECORD, gold_route="review", pred_route="review"),
         replace(RECORD, gold_route="review", pred_route="approve"),
         replace(RECORD, gold_route="review", pred_route="reject"),
         replace(RECORD, gold_route="reject", pred_route="approve"),
     ]
     metrics = aggregate(records)
-    assert (metrics["review_caught"], metrics["review_n"]) == (1, 2)
+    assert (metrics["review_caught"], metrics["review_n"]) == (1, 3)
     assert metrics["reject_acc"] == 0.0
-    assert metrics["confusion"]["review"] == {"approve": 1, "review": 0, "reject": 1}
+    assert metrics["confusion"]["review"] == {"approve": 1, "review": 1, "reject": 1}
 
 
 def test_aggregate_of_empty_set_is_all_none():

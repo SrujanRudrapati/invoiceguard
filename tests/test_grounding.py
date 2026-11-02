@@ -4,10 +4,12 @@ from decimal import Decimal
 from invoiceguard.grounding import (
     Verification,
     dates_in,
+    decimal_mark,
     is_verified,
     locate,
     merge_line_boxes,
     normalize,
+    numbers_in,
     slash_order,
     verify_invoice,
 )
@@ -131,3 +133,28 @@ def test_same_day_and_month_is_not_ambiguous():
 
 def test_other_date_formats_are_unaffected_by_slash_order():
     assert dates_in("Dated: 03 Nov 2026", order=None) == {date(2026, 11, 3)}
+
+
+# ---------- decimal mark: resolved per document ----------
+
+EU_TEXT = "Keg beer, 50 l 12 89,50 1.074,00\nSubtotal: 1.434,00\nTax: 272,46\nTotal: 1.706,46"
+
+
+def test_decimal_mark_comes_from_the_page():
+    assert decimal_mark(EU_TEXT) == ","
+    assert decimal_mark("Subtotal: 1,540.00\nTax: 0.00") == "."
+    assert decimal_mark("Total: 1.706,46\nFee: 12.50") == "."  # mixed evidence -> default
+    assert decimal_mark("no money here") == "."
+
+
+def test_eu_total_is_verified_and_a_dot_misread_is_not():
+    doc = text_doc(EU_TEXT)
+    right = Extracted(value=Decimal("1706.46"), evidence="Total: 1.706,46")
+    misread = Extracted(value=Decimal("1.706"), evidence="Total: 1.706,46")
+    checks = verify_invoice(doc, Invoice(doc_type="invoice", total=right, tax=misread))
+    assert checks["total"].verified and not checks["tax"].verified
+
+
+def test_numbers_in_parses_comma_decimals():
+    assert numbers_in("Total: 1.706,46", ",") == {Decimal("1706.46")}
+    assert numbers_in("Total: 1,706.46", ".") == {Decimal("1706.46")}
