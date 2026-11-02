@@ -19,6 +19,7 @@ from invoiceguard.config import (
     LABELS_PATH,
     REVIEWED_LABELS_PATH,
     RUNS_DIR,
+    MissingAPIKeyError,
 )
 from invoiceguard.pipeline import DocResult, Extractor, run_document
 from invoiceguard.schema import SCALAR_FIELDS, LabelRow
@@ -113,7 +114,11 @@ def main() -> None:
         labels = load_labels(HARD_LABELS_PATH)
     else:
         labels = load_labels(LABELS_PATH) + load_labels(REVIEWED_LABELS_PATH)
-    records, _ = evaluate(SYSTEMS[args.system](), labels, DATA_DIR)
+    try:
+        extractor = SYSTEMS[args.system]()
+    except MissingAPIKeyError as exc:
+        raise SystemExit(str(exc)) from exc
+    records, _ = evaluate(extractor, labels, DATA_DIR)
     scored = aggregate([r for r in records if r.source == "synthetic"])
     reviewed_metrics = aggregate([r for r in records if r.source == "reviewer"])
     run_path = write_outputs(args.system, args.label_set, args.tag, records, scored)

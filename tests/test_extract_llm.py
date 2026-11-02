@@ -128,3 +128,9 @@ def test_every_call_is_logged_with_tokens_and_cost(model_call_log):
 def test_prompt_treats_credit_notes_as_billing_documents():
     assert "credit notes" in extract_llm.SYSTEM_PROMPT
     assert "report them negative" in extract_llm.SYSTEM_PROMPT
+
+
+def test_missing_key_is_a_typed_error_with_a_way_forward(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    with pytest.raises(config.MissingAPIKeyError, match="DEMO_SYSTEM=baseline"):
+        extract_llm.make_client()

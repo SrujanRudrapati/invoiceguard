@@ -149,9 +149,13 @@ def read_history(path: Path) -> list[dict]:
 
 @app.get("/evals")
 def get_evals() -> dict:
-    """All history rows, plus the latest tag's row per (set, system) for the results table."""
+    """All history rows, plus the latest tag's row per (set, system) for the results table.
+
+    Untagged runs (make eval without TAG) stay in history but never become "latest".
+    """
     history = read_history(HISTORY_PATH)
-    latest_tag = history[-1]["tag"] if history else None
+    tagged = [row["tag"] for row in history if row.get("tag")]
+    latest_tag = tagged[-1] if tagged else None
     latest = {}
     for row in history:
         if row["tag"] == latest_tag:

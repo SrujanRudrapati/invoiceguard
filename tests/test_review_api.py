@@ -104,3 +104,16 @@ def test_api_maps_errors_to_status_codes(seeded):
         api.post_reject(doc_id, conn)
     assert (missing.value.status_code, invalid.value.status_code,
             twice.value.status_code) == (404, 422, 409)
+
+
+def test_evals_latest_ignores_untagged_runs(tmp_path, monkeypatch):
+    rows = [{"tag": "v4", "system": "haiku", "set": "main"},
+            {"tag": "v4", "system": "cascade", "set": "main"},
+            {"tag": "", "system": "baseline", "set": "main"}]
+    path = tmp_path / "history.jsonl"
+    path.write_text("".join(json.dumps(r) + "\n" for r in rows))
+    monkeypatch.setattr(api, "HISTORY_PATH", path)
+    evals = api.get_evals()
+    assert evals["latest_tag"] == "v4"
+    assert {r["system"] for r in evals["latest"]} == {"haiku", "cascade"}
+    assert len(evals["history"]) == 3

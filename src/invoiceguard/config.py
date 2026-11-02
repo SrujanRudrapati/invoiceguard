@@ -44,9 +44,19 @@ def cost_usd(model: str, input_tokens: int, output_tokens: int) -> float:
     return (input_tokens * price["input"] + output_tokens * price["output"]) / 1_000_000
 
 
+class MissingAPIKeyError(RuntimeError):
+    pass
+
+
+MISSING_KEY_HELP = (
+    "ANTHROPIC_API_KEY is not set. Copy .env.example to .env and add your key, "
+    "or use the free regex system (SYSTEM=baseline / DEMO_SYSTEM=baseline)."
+)
+
+
 def anthropic_api_key() -> str:
-    """Read the key lazily so offline code (data, tests) never needs it."""
+    """Read the key lazily so offline code (data, tests, baseline) never needs it."""
     key = os.environ.get("ANTHROPIC_API_KEY")
     if not key:
-        raise RuntimeError("ANTHROPIC_API_KEY is not set; copy .env.example to .env")
+        raise MissingAPIKeyError(MISSING_KEY_HELP)
     return key
