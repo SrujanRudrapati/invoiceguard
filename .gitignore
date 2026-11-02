@@ -1,5 +1,8 @@
+runs/*
+!runs/history.jsonl
 .env
 node_modules/
-runs/*.jsonl
 __pycache__/
 .venv/
+.pytest_cache/
+.ruff_cache/
