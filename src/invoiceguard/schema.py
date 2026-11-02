@@ -1,17 +1,18 @@
 """Pydantic models shared by labels, extraction output and evals."""
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Generic, Literal, TypeVar
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 T = TypeVar("T")
 
 DocType = Literal["invoice", "not_invoice"]
 Route = Literal["approve", "review", "reject"]
 Category = Literal[
-    "clean", "messy", "arithmetic_error", "missing_field", "non_invoice", "injection", "hard"
+    "clean", "messy", "arithmetic_error", "missing_field", "non_invoice", "injection", "hard",
+    "reviewed",
 ]
 Source = Literal["synthetic", "reviewer"]
 
@@ -27,6 +28,12 @@ SCALAR_FIELDS = (
     "total",
 )
 REQUIRED_FIELDS = tuple(f for f in SCALAR_FIELDS if f != "po_number")
+def field_label(name: str) -> str:
+    """Sentence-case label that keeps acronyms: "PO number", "Invoice date"."""
+    label = FIELD_LABELS[name]
+    return label[0].upper() + label[1:]
+
+
 FIELD_LABELS = {
     "vendor_name": "vendor", "invoice_number": "invoice number", "invoice_date": "invoice date",
     "due_date": "due date", "currency": "currency", "subtotal": "subtotal", "tax": "tax",
@@ -106,6 +113,8 @@ class LabelRow(Strict):
     expected_route: Route
     defects: tuple[str, ...] = ()
     fields: InvoiceFields
+    # set on rows a reviewer corrected; omitted otherwise so generated label files don't change
+    reviewed_at: datetime | None = Field(default=None, exclude_if=lambda v: v is None)
 
 
 # ---------- model-facing tool schema ----------

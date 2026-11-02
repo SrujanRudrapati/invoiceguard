@@ -1,6 +1,7 @@
 """Business rules over an extracted invoice. Each failure is a specific, human-readable reason."""
 
 import re
+from dataclasses import dataclass
 from decimal import Decimal
 
 from invoiceguard.schema import FIELD_LABELS, REQUIRED_FIELDS, Invoice, LineItem
@@ -28,7 +29,7 @@ def missing_fields(inv: Invoice) -> list[str]:
 
 def bad_line_amounts(items: tuple[LineItem, ...], currency: str | None) -> list[str]:
     return [
-        f"{i.description}: {i.quantity:f} x {money(i.unit_price, currency)} is "
+        f"{i.description}: {i.quantity.normalize():f} x {money(i.unit_price, currency)} is "
         f"{money(i.quantity * i.unit_price, currency)}, line says {money(i.amount, currency)}"
         for i in items
         if abs(i.quantity * i.unit_price - i.amount) > TOLERANCE
@@ -68,7 +69,40 @@ def injection_text(text: str) -> list[str]:
     match = INJECTION.search(text)
     if not match:
         return []
-    return [f'Document contains instructions aimed at an AI system: "{match.group(0).strip()}"']
+    start = text.rfind("\n", 0, match.start()) + 1
+    end = text.find("\n", match.end())
+    line = text[start:end if end >= 0 else len(text)].strip()
+    return [f'Document contains instructions aimed at an AI system: "{line}"']
+
+
+@dataclass(frozen=True)
+class RuleResult:
+    name: str
+    failures: tuple[str, ...]
+
+    @property
+    def passed(self) -> bool:
+        return not self.failures
+
+
+def evaluate(inv: Invoice, text: str,
+             unverified: dict[str, str] | None = None) -> tuple[RuleResult, ...]:
+    """Every rule with its outcome, in display order. Non-invoices have no rules."""
+    if inv.doc_type == "not_invoice":
+        return ()
+    unverified = unverified or {}
+    currency = inv.currency.value
+    return (
+        RuleResult("Required fields present", tuple(missing_fields(inv))),
+        RuleResult("Evidence found in the document", tuple(unverified.values())),
+        RuleResult("Line amounts equal quantity times price",
+                   tuple(bad_line_amounts(inv.line_items, currency))),
+        RuleResult("Line items add to subtotal", tuple(line_sum_mismatch(inv, currency))),
+        RuleResult("Subtotal plus tax equals total", tuple(total_mismatch(inv, currency))),
+        RuleResult("Due date on or after invoice date",
+                   tuple(due_before_issue(inv, unverified))),
+        RuleResult("No instructions aimed at an AI system", tuple(injection_text(text))),
+    )
 
 
 def check(inv: Invoice, text: str, unverified: dict[str, str] | None = None) -> tuple[str, ...]:
@@ -76,16 +110,4 @@ def check(inv: Invoice, text: str, unverified: dict[str, str] | None = None) -> 
 
     unverified maps each field whose evidence did not check out to grounding's reason.
     """
-    unverified = unverified or {}
-    if inv.doc_type == "not_invoice":
-        return ()
-    currency = inv.currency.value
-    return tuple(
-        missing_fields(inv)
-        + list(unverified.values())
-        + bad_line_amounts(inv.line_items, currency)
-        + line_sum_mismatch(inv, currency)
-        + total_mismatch(inv, currency)
-        + due_before_issue(inv, unverified)
-        + injection_text(text)
-    )
+    return tuple(f for rule in evaluate(inv, text, unverified) for f in rule.failures)

@@ -52,8 +52,10 @@ def now() -> str:
     return datetime.now(UTC).isoformat(timespec="seconds")
 
 
-def connect(path: Path | str) -> sqlite3.Connection:
-    conn = sqlite3.connect(path)
+def connect(path: Path | str, check_same_thread: bool = True) -> sqlite3.Connection:
+    """check_same_thread=False only for one-connection-per-request use (FastAPI may open and
+    close a sync dependency on different worker threads)."""
+    conn = sqlite3.connect(path, check_same_thread=check_same_thread)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     conn.executescript(SCHEMA)
@@ -115,3 +117,46 @@ def latest_extraction(conn: sqlite3.Connection, doc_id: str) -> sqlite3.Row | No
 
 def audit_entries(conn: sqlite3.Connection) -> list[sqlite3.Row]:
     return conn.execute("SELECT * FROM audit_log ORDER BY id").fetchall()
+
+
+def document(conn: sqlite3.Connection, doc_id: str) -> sqlite3.Row | None:
+    return conn.execute("SELECT * FROM documents WHERE doc_id = ?", (doc_id,)).fetchone()
+
+
+def is_reviewed(conn: sqlite3.Connection, doc_id: str) -> bool:
+    return conn.execute("SELECT 1 FROM reviews WHERE doc_id = ?", (doc_id,)).fetchone() is not None
+
+
+STATUS_SQL = """
+    SELECT e.*,
+           CASE WHEN r.action IS NULL THEN e.route
+                WHEN r.action = 'reject' THEN 'reject'
+                ELSE 'approve' END AS status,
+           r.action AS review_action
+    FROM extractions e
+    LEFT JOIN reviews r ON r.doc_id = e.doc_id
+    WHERE e.id = (SELECT MAX(id) FROM extractions WHERE doc_id = e.doc_id)
+"""
+
+
+def queue(conn: sqlite3.Connection, status: str = "review") -> list[sqlite3.Row]:
+    """Latest extraction per document with its status: the reviewer's decision if there is
+    one, otherwise the system's route. status="review" is the work queue."""
+    return conn.execute(f"SELECT * FROM ({STATUS_SQL}) WHERE status = ? ORDER BY doc_id",
+                        (status,)).fetchall()
+
+
+def status_of(conn: sqlite3.Connection, doc_id: str) -> sqlite3.Row | None:
+    return conn.execute(f"SELECT * FROM ({STATUS_SQL}) WHERE doc_id = ?", (doc_id,)).fetchone()
+
+
+def audit_for(conn: sqlite3.Connection, doc_id: str) -> list[sqlite3.Row]:
+    return conn.execute(
+        """
+        SELECT * FROM audit_log
+        WHERE (entity = 'document' AND entity_id = ?)
+           OR json_extract(detail_json, '$.doc_id') = ?
+        ORDER BY id
+        """,
+        (doc_id, doc_id),
+    ).fetchall()

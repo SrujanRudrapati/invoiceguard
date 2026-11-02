@@ -1,5 +1,6 @@
 SYSTEM ?= baseline
 SET ?= main
+DEMO_SYSTEM ?= cascade
 TAG ?=
 
 .PHONY: setup data eval compare analyze api web demo test lint
@@ -28,6 +29,7 @@ web:
 	cd web && npm run dev
 
 demo:
+	uv run python -m invoiceguard.process --system $(DEMO_SYSTEM)
 	$(MAKE) -j2 api web
 
 test:

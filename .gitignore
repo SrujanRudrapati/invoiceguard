@@ -7,3 +7,6 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 data/*.sqlite3
+web/dist/
+.playwright-mcp/
+web/tsconfig.tsbuildinfo

@@ -18,7 +18,7 @@ from decimal import Decimal, InvalidOperation
 from functools import lru_cache
 
 from invoiceguard.ingest import Document
-from invoiceguard.schema import FIELD_LABELS, SCALAR_FIELDS, Box, Extracted, Invoice
+from invoiceguard.schema import SCALAR_FIELDS, Box, Extracted, Invoice, field_label
 
 LINE_TOLERANCE_PT = 2.0
 UNIFY = str.maketrans({
@@ -185,7 +185,7 @@ def value_matches_quote(value: object, quote: str, fmt: PageFormat | None = None
 
 
 def verify_field(doc: Document, name: str, field: Extracted, fmt: PageFormat) -> Verification:
-    label = FIELD_LABELS[name].capitalize()
+    label = field_label(name)
     unverified = Verification(False, f"{label} could not be verified against the document")
     if not field.evidence or locate(doc.text, field.evidence) is None:
         return unverified

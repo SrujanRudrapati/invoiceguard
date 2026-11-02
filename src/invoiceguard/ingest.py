@@ -21,6 +21,7 @@ class IngestError(Exception):
 class Document:
     text: str
     boxes: tuple[Box | None, ...]  # boxes[i] is text[i]'s box; None for layout spaces/newlines
+    page_sizes: tuple[tuple[float, float], ...] = ()  # (width, height) in points per page
 
 
 def char_box(page: int, char: dict | None) -> Box | None:
@@ -32,16 +33,18 @@ def char_box(page: int, char: dict | None) -> Box | None:
 def load_document(path: Path) -> Document:
     texts: list[str] = []
     boxes: list[Box | None] = []
+    sizes: list[tuple[float, float]] = []
     try:
         with pdfplumber.open(path) as pdf:
             for n, page in enumerate(pdf.pages):
                 if n:
                     texts.append(PAGE_BREAK)
                     boxes.extend([None] * len(PAGE_BREAK))
+                sizes.append((float(page.width), float(page.height)))
                 textmap = page.get_textmap()  # same string as extract_text(), plus char refs
                 texts.append(textmap.as_string)
                 boxes.extend(char_box(n, char) for _, char in textmap.tuples)
     except (OSError, PdfminerException) as exc:
         log.error("ingest failed for %s: %s", path, exc)
         raise IngestError(f"cannot read {path}: {exc}") from exc
-    return Document(text="".join(texts), boxes=tuple(boxes))
+    return Document(text="".join(texts), boxes=tuple(boxes), page_sizes=tuple(sizes))

@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "IBM Plex Sans", system-ui, sans-serif;
+
+  --color-ink: #1e2b3c;
+  --color-ink-muted: #56647a;
+  --color-paper: #eef3ef;
+  --color-surface: #ffffff;
+  --color-rule: #d5ded7;
+  --color-ledger: #7f9dbf;
+  --color-ledger-deep: #3e5e82;
+  --color-ledger-tint: #eaf0f6;
+  --color-approve: #2e7a57;
+  --color-review: #b9801f;
+  --color-review-deep: #8a5d10;
+  --color-review-tint: #f7efdf;
+  --color-reject: #a8432e;
+
+  --text-meta: 13px;
+  --text-meta--line-height: 18px;
+  --text-body: 15px;
+  --text-body--line-height: 22px;
+  --text-title: 20px;
+  --text-title--line-height: 26px;
+  --text-display: 28px;
+  --text-display--line-height: 34px;
+}
+
+:root {
+  --bottom-bar-height: 56px;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.money {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-ledger-deep);
+  outline-offset: 2px;
+}

@@ -6,42 +6,24 @@ Usage: uv run python eval/run_eval.py --system baseline [--set main|hard] [--tag
 import argparse
 import json
 import subprocess
-from collections.abc import Callable
 from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
 
 from scoring import DocRecord, aggregate, score_fields
 
-from invoiceguard.cascade import cascade_extractor
 from invoiceguard.config import (
     DATA_DIR,
-    HAIKU_MODEL,
     HARD_LABELS_PATH,
     HISTORY_PATH,
     LABELS_PATH,
     REVIEWED_LABELS_PATH,
     RUNS_DIR,
-    SONNET_MODEL,
 )
-from invoiceguard.pipeline import (
-    DocResult,
-    Extractor,
-    baseline_extractor,
-    llm_extractor,
-    run_document,
-)
+from invoiceguard.pipeline import DocResult, Extractor, run_document
 from invoiceguard.schema import SCALAR_FIELDS, LabelRow
+from invoiceguard.systems import SYSTEM_MODELS, SYSTEMS
 
-# Built lazily so `baseline` never needs an API key.
-SYSTEMS: dict[str, Callable[[], Extractor]] = {
-    "baseline": lambda: baseline_extractor,
-    "haiku": lambda: llm_extractor(HAIKU_MODEL),
-    "sonnet": lambda: llm_extractor(SONNET_MODEL),
-    "cascade": cascade_extractor,
-}
-SYSTEM_MODELS = {"baseline": "regex", "haiku": HAIKU_MODEL, "sonnet": SONNET_MODEL,
-                 "cascade": f"{HAIKU_MODEL}->{SONNET_MODEL}"}
 HISTORY_KEYS = (
     "field_acc", "line_item_acc", "doc_exact", "review_recall", "reject_acc", "auto_approve",
     "grounding", "verified_wrong", "escalation_rate", "p50_ms", "p95_ms", "usd_per_doc", "n_docs",
