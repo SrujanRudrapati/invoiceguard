@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from invoiceguard import baseline, extract_llm, rules
-from invoiceguard.grounding import grounding_flags
+from invoiceguard.grounding import Verification, verify_invoice
 from invoiceguard.ingest import Document, load_document
 from invoiceguard.route import Decision, route
 from invoiceguard.schema import Invoice
@@ -54,17 +54,20 @@ def llm_extractor(model: str) -> Extractor:
     return run
 
 
-def failures_for(doc: Document, extraction: Extraction, grounded: dict[str, bool]) -> tuple:
+def failures_for(doc: Document, extraction: Extraction,
+                 checks: dict[str, Verification]) -> tuple[str, ...]:
     if extraction.error:
         return (EXTRACTION_FAILED_REASON,)
-    return rules.check(extraction.invoice, doc.text, grounded)
+    unverified = tuple(v.reason for v in checks.values() if not v.verified)
+    return rules.check(extraction.invoice, doc.text, unverified)
 
 
 def run_document(path: Path, extractor: Extractor) -> DocResult:
     start = time.perf_counter()
     doc = load_document(path)
     extraction = extractor(doc)
-    grounded = grounding_flags(doc, extraction.invoice)
-    decision = route(extraction.invoice, failures_for(doc, extraction, grounded))
+    checks = verify_invoice(doc, extraction.invoice)
+    decision = route(extraction.invoice, failures_for(doc, extraction, checks))
     latency_ms = (time.perf_counter() - start) * 1000
+    grounded = {name: v.verified for name, v in checks.items()}
     return DocResult(extraction, decision, grounded, latency_ms)

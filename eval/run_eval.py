@@ -28,7 +28,7 @@ from invoiceguard.pipeline import (
     llm_extractor,
     run_document,
 )
-from invoiceguard.schema import LabelRow
+from invoiceguard.schema import SCALAR_FIELDS, LabelRow
 
 # Built lazily so `baseline` never needs an API key.
 SYSTEMS: dict[str, Callable[[], Extractor]] = {
@@ -39,7 +39,7 @@ PLANNED_SYSTEMS = ("sonnet", "cascade")
 SYSTEM_MODELS = {"baseline": "regex", "haiku": HAIKU_MODEL}
 HISTORY_KEYS = (
     "field_acc", "line_item_acc", "doc_exact", "review_recall", "reject_acc", "auto_approve",
-    "grounding", "escalation_rate", "p50_ms", "p95_ms", "usd_per_doc", "n_docs",
+    "grounding", "verified_wrong", "escalation_rate", "p50_ms", "p95_ms", "usd_per_doc", "n_docs",
 )
 
 
@@ -67,6 +67,7 @@ def to_record(label: LabelRow, result: DocResult) -> DocRecord:
         latency_ms=result.latency_ms, usd=result.extraction.usd,
         escalated=result.extraction.escalated,
         predicted=result.extraction.invoice.values().model_dump(mode="json"),
+        evidence={n: getattr(result.extraction.invoice, n).evidence for n in SCALAR_FIELDS},
     )
 
 

@@ -27,6 +27,11 @@ SCALAR_FIELDS = (
     "total",
 )
 REQUIRED_FIELDS = tuple(f for f in SCALAR_FIELDS if f != "po_number")
+FIELD_LABELS = {
+    "vendor_name": "vendor", "invoice_number": "invoice number", "invoice_date": "invoice date",
+    "due_date": "due date", "currency": "currency", "subtotal": "subtotal", "tax": "tax",
+    "total": "total", "po_number": "PO number",
+}
 
 
 class Strict(BaseModel):

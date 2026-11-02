@@ -29,6 +29,7 @@ class DocRecord:
     usd: float
     escalated: bool
     predicted: dict = field(default_factory=dict)
+    evidence: dict = field(default_factory=dict)
 
 
 def norm_value(value: object) -> str | None:
@@ -83,6 +84,14 @@ def field_counts(records: list[DocRecord]) -> tuple[int, int]:
     return sum(hits), len(hits)
 
 
+def verified_wrong(records: list[DocRecord]) -> int:
+    """Fields grounding marked verified whose value is wrong: the errors nobody would see."""
+    return sum(
+        1 for r in records if r.field_hits
+        for name, ok in r.field_hits.items() if not ok and r.grounded.get(name)
+    )
+
+
 def aggregate(records: list[DocRecord]) -> dict:
     field_hit, field_n = field_counts(records)
     review = [r for r in records if r.gold_route == "review"]
@@ -101,6 +110,7 @@ def aggregate(records: list[DocRecord]) -> dict:
         "reject_acc": ratio(sum(r.pred_route == "reject" for r in reject), len(reject)),
         "auto_approve": ratio(sum(r.pred_route == "approve" for r in records), len(records)),
         "grounding": ratio(sum(grounded), len(grounded)),
+        "verified_wrong": verified_wrong(records),
         "escalation_rate": ratio(sum(r.escalated for r in records), len(records)),
         "p50_ms": percentile(latencies, 50) if latencies else None,
         "p95_ms": percentile(latencies, 95) if latencies else None,

@@ -1,9 +1,18 @@
 from datetime import date
 from decimal import Decimal
 
-from invoiceguard.grounding import dates_in, is_verified, locate, merge_line_boxes, normalize
+from invoiceguard.grounding import (
+    Verification,
+    dates_in,
+    is_verified,
+    locate,
+    merge_line_boxes,
+    normalize,
+    slash_order,
+    verify_invoice,
+)
 from invoiceguard.ingest import Document
-from invoiceguard.schema import Box, Extracted
+from invoiceguard.schema import Box, Extracted, Invoice
 
 
 def test_normalize_casefolds_collapses_whitespace_and_unifies_punctuation():
@@ -73,6 +82,52 @@ def test_missing_or_absent_quote_is_unverified():
     assert not is_verified(doc(), Extracted(value=Decimal("6447"), evidence="Total: 6447.00"))
 
 
-def test_slash_dates_accept_either_reading():
-    assert date(2026, 11, 3) in dates_in("Due: 11/03/2026")
-    assert date(2026, 3, 11) in dates_in("Due: 11/03/2026")
+# ---------- slash dates: order resolved per document ----------
+
+
+def text_doc(text: str) -> Document:
+    return Document(text=text, boxes=(None,) * len(text))
+
+
+def test_slash_order_comes_from_any_unambiguous_date_on_the_page():
+    assert slash_order("Invoice date: 09/26/2026\nDue date: 11/10/2026") == "MDY"
+    assert slash_order("Invoice date: 26/09/2026\nDue date: 10/11/2026") == "DMY"
+    assert slash_order("Invoice date: 10/05/2026\nDue date: 11/04/2026") is None
+    assert slash_order("no dates here") is None
+
+
+def test_resolved_document_reads_ambiguous_date_in_document_order():
+    doc = text_doc("Invoice date: 09/26/2026\nDue date: 11/10/2026")
+    checks = verify_invoice(doc, Invoice(
+        doc_type="invoice",
+        due_date=Extracted(value=date(2026, 11, 10), evidence="Due date: 11/10/2026")))
+    assert checks["due_date"] == Verification(True)
+
+
+def test_misread_on_resolved_document_is_unverified_not_ambiguous():
+    doc = text_doc("Invoice date: 09/26/2026\nDue date: 11/10/2026")
+    checks = verify_invoice(doc, Invoice(
+        doc_type="invoice",
+        due_date=Extracted(value=date(2026, 10, 11), evidence="Due date: 11/10/2026")))
+    assert checks["due_date"] == Verification(
+        False, "Due date could not be verified against the document")
+
+
+def test_all_ambiguous_document_gets_specific_reason_and_no_escalation_flag():
+    doc = text_doc("Invoice date: 10/05/2026\nDue date: 11/04/2026")
+    checks = verify_invoice(doc, Invoice(
+        doc_type="invoice",
+        invoice_date=Extracted(value=date(2026, 10, 5), evidence="Invoice date: 10/05/2026")))
+    assert checks["invoice_date"] == Verification(
+        False, "Ambiguous date 10/05/2026 (MM/DD or DD/MM)", ambiguous=True)
+
+
+def test_same_day_and_month_is_not_ambiguous():
+    doc = text_doc("Invoice date: 05/05/2026")
+    field = Extracted(value=date(2026, 5, 5), evidence="Invoice date: 05/05/2026")
+    assert verify_invoice(doc, Invoice(doc_type="invoice", invoice_date=field))[
+        "invoice_date"].verified
+
+
+def test_other_date_formats_are_unaffected_by_slash_order():
+    assert dates_in("Dated: 03 Nov 2026", order=None) == {date(2026, 11, 3)}

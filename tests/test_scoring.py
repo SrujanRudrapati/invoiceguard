@@ -4,7 +4,15 @@ from decimal import Decimal
 
 import pytest
 from run_eval import evaluate
-from scoring import DocRecord, aggregate, line_item_match, norm_value, percentile, score_fields
+from scoring import (
+    DocRecord,
+    aggregate,
+    line_item_match,
+    norm_value,
+    percentile,
+    score_fields,
+    verified_wrong,
+)
 
 from invoiceguard.pipeline import baseline_extractor
 from invoiceguard.schema import InvoiceFields, LineItem
@@ -68,4 +76,19 @@ def test_baseline_end_to_end_on_generated_data(generated):
     records, results = evaluate(baseline_extractor, rows, data_dir)
     metrics = aggregate(records)
     assert metrics["n_docs"] == 24 and len(results) == 24
-    assert metrics["grounding"] == 1.0  # regex evidence is literal document text
+    assert metrics["verified_wrong"] == 0
+    # regex quotes are literal text; only all-ambiguous slash dates stay unverified
+    unverified = {(r.doc_id, name) for r in records for name, ok in r.grounded.items() if not ok}
+    ambiguous_docs = {r.doc_id for r in rows if r.file in {"docs/doc_015.pdf", "docs/doc_020.pdf"}}
+    assert unverified and {doc_id for doc_id, _ in unverified} == ambiguous_docs
+    assert {name for _, name in unverified} <= {"invoice_date", "due_date"}
+
+
+def test_verified_wrong_counts_only_verified_fields_with_wrong_values():
+    records = [
+        replace(RECORD, field_hits={"total": False, "tax": False, "vendor_name": True},
+                grounded={"total": True, "tax": False, "vendor_name": True}),
+        replace(RECORD, field_hits=None, grounded={"total": True}),  # non-invoice: not scored
+    ]
+    assert verified_wrong(records) == 1
+    assert aggregate(records)["verified_wrong"] == 1

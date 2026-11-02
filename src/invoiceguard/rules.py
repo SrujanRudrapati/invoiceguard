@@ -3,15 +3,10 @@
 import re
 from decimal import Decimal
 
-from invoiceguard.schema import REQUIRED_FIELDS, Invoice, LineItem
+from invoiceguard.schema import FIELD_LABELS, REQUIRED_FIELDS, Invoice, LineItem
 
 TOLERANCE = Decimal("0.01")
 SYMBOLS = {"USD": "$", "EUR": "€", "GBP": "£"}
-FIELD_LABELS = {
-    "vendor_name": "vendor", "invoice_number": "invoice number", "invoice_date": "invoice date",
-    "due_date": "due date", "currency": "currency", "subtotal": "subtotal", "tax": "tax",
-    "total": "total", "po_number": "PO number",
-}
 # Backstop for instructions aimed at an AI system; the model is also told to ignore them.
 INJECTION = re.compile(
     r"\b(ignore|disregard)\b.{0,40}\binstructions?\b|^\s*(system|assistant)\s*:|you are now",
@@ -73,24 +68,17 @@ def injection_text(text: str) -> list[str]:
     return [f'Document contains instructions aimed at an AI system: "{match.group(0).strip()}"']
 
 
-def unverified_fields(grounded: dict[str, bool]) -> list[str]:
-    return [
-        f"{FIELD_LABELS[name].capitalize()} could not be verified against the document"
-        for name, verified in grounded.items() if not verified
-    ]
-
-
-def check(inv: Invoice, text: str, grounded: dict[str, bool] | None = None) -> tuple[str, ...]:
+def check(inv: Invoice, text: str, unverified: tuple[str, ...] = ()) -> tuple[str, ...]:
     """All rule failures for an invoice; empty means every rule passed.
 
-    grounded maps each extracted field to whether its evidence was verified.
+    unverified carries grounding's reasons for fields whose evidence did not check out.
     """
     if inv.doc_type == "not_invoice":
         return ()
     currency = inv.currency.value
     return tuple(
         missing_fields(inv)
-        + unverified_fields(grounded or {})
+        + list(unverified)
         + bad_line_amounts(inv.line_items, currency)
         + line_sum_mismatch(inv, currency)
         + total_mismatch(inv, currency)

@@ -63,9 +63,9 @@ def test_missing_po_number_is_fine():
     assert rules.check(invoice(po_number=Extracted()), "") == ()
 
 
-def test_unverified_evidence_is_a_failure():
-    assert rules.check(invoice(), "", {"total": False, "vendor_name": True}) == (
-        "Total could not be verified against the document",)
+def test_grounding_reasons_are_passed_through_as_failures():
+    reason = "Ambiguous date 10/05/2026 (MM/DD or DD/MM)"
+    assert rules.check(invoice(), "", (reason,)) == (reason,)
 
 
 def test_injection_text_is_flagged():
