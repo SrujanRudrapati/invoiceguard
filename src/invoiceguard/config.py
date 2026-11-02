@@ -11,6 +11,7 @@ load_dotenv(ROOT / ".env")
 DATA_DIR = ROOT / "data"
 DOCS_DIR = DATA_DIR / "docs"
 LABELS_PATH = DATA_DIR / "labels.jsonl"
+HARD_LABELS_PATH = DATA_DIR / "labels_hard.jsonl"
 REVIEWED_LABELS_PATH = DATA_DIR / "labels_reviewed.jsonl"
 RUNS_DIR = ROOT / "runs"
 HISTORY_PATH = RUNS_DIR / "history.jsonl"

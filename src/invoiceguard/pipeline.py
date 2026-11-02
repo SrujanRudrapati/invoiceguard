@@ -58,7 +58,7 @@ def failures_for(doc: Document, extraction: Extraction,
                  checks: dict[str, Verification]) -> tuple[str, ...]:
     if extraction.error:
         return (EXTRACTION_FAILED_REASON,)
-    unverified = tuple(v.reason for v in checks.values() if not v.verified)
+    unverified = {name: v.reason for name, v in checks.items() if not v.verified}
     return rules.check(extraction.invoice, doc.text, unverified)
 
 

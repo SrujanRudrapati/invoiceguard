@@ -11,7 +11,7 @@ T = TypeVar("T")
 DocType = Literal["invoice", "not_invoice"]
 Route = Literal["approve", "review", "reject"]
 Category = Literal[
-    "clean", "messy", "arithmetic_error", "missing_field", "non_invoice", "injection"
+    "clean", "messy", "arithmetic_error", "missing_field", "non_invoice", "injection", "hard"
 ]
 Source = Literal["synthetic", "reviewer"]
 

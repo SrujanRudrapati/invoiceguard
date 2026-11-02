@@ -54,7 +54,10 @@ def total_mismatch(inv: Invoice, currency: str | None) -> list[str]:
             f"total says {money(total, currency)}"]
 
 
-def due_before_issue(inv: Invoice) -> list[str]:
+def due_before_issue(inv: Invoice, unverified: dict[str, str]) -> list[str]:
+    """Skipped when either date is unverified: a misread date would produce a false chip."""
+    if {"invoice_date", "due_date"} & unverified.keys():
+        return []
     issued, due = inv.invoice_date.value, inv.due_date.value
     if issued is None or due is None or due >= issued:
         return []
@@ -68,20 +71,21 @@ def injection_text(text: str) -> list[str]:
     return [f'Document contains instructions aimed at an AI system: "{match.group(0).strip()}"']
 
 
-def check(inv: Invoice, text: str, unverified: tuple[str, ...] = ()) -> tuple[str, ...]:
+def check(inv: Invoice, text: str, unverified: dict[str, str] | None = None) -> tuple[str, ...]:
     """All rule failures for an invoice; empty means every rule passed.
 
-    unverified carries grounding's reasons for fields whose evidence did not check out.
+    unverified maps each field whose evidence did not check out to grounding's reason.
     """
+    unverified = unverified or {}
     if inv.doc_type == "not_invoice":
         return ()
     currency = inv.currency.value
     return tuple(
         missing_fields(inv)
-        + list(unverified)
+        + list(unverified.values())
         + bad_line_amounts(inv.line_items, currency)
         + line_sum_mismatch(inv, currency)
         + total_mismatch(inv, currency)
-        + due_before_issue(inv)
+        + due_before_issue(inv, unverified)
         + injection_text(text)
     )

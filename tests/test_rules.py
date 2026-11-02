@@ -65,7 +65,14 @@ def test_missing_po_number_is_fine():
 
 def test_grounding_reasons_are_passed_through_as_failures():
     reason = "Ambiguous date 10/05/2026 (MM/DD or DD/MM)"
-    assert rules.check(invoice(), "", (reason,)) == (reason,)
+    assert rules.check(invoice(), "", {"invoice_date": reason}) == (reason,)
+
+
+def test_due_date_rule_skipped_when_either_date_is_unverified():
+    inv = invoice(due_date=Extracted(value=date(2026, 8, 1)))
+    reason = "Ambiguous date 08/01/2026 (MM/DD or DD/MM)"
+    assert rules.check(inv, "", {"due_date": reason}) == (reason,)
+    assert rules.check(inv, "", {"invoice_date": reason}) == (reason,)
 
 
 def test_injection_text_is_flagged():

@@ -1,7 +1,8 @@
 SYSTEM ?= baseline
+SET ?= main
 TAG ?=
 
-.PHONY: setup data eval analyze api web demo test lint
+.PHONY: setup data eval compare analyze api web demo test lint
 
 setup:
 	uv sync
@@ -9,9 +10,13 @@ setup:
 
 data:
 	uv run python scripts/make_synthetic.py
+	uv run python scripts/make_hard.py
 
 eval:
-	uv run python eval/run_eval.py --system $(SYSTEM) --tag "$(TAG)"
+	uv run python eval/run_eval.py --system $(SYSTEM) --set $(SET) --tag "$(TAG)"
+
+compare:
+	uv run python eval/compare.py --tag "$(TAG)"
 
 analyze:
 	uv run python eval/analyze.py

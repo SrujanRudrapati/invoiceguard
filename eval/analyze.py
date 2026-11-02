@@ -9,7 +9,7 @@ from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
-from invoiceguard.config import DATA_DIR, LABELS_PATH, RUNS_DIR
+from invoiceguard.config import DATA_DIR, HARD_LABELS_PATH, LABELS_PATH, RUNS_DIR
 from invoiceguard.grounding import locate
 from invoiceguard.ingest import load_document
 from invoiceguard.schema import SCALAR_FIELDS
@@ -92,7 +92,8 @@ def route_error(rec: dict, label: dict, doc_errors: list[Error]) -> list[Error]:
 
 
 def analyze(run_path: Path) -> list[Error]:
-    labels = {row["doc_id"]: row for row in read_jsonl(LABELS_PATH)}
+    labels = {row["doc_id"]: row for path in (LABELS_PATH, HARD_LABELS_PATH)
+              for row in read_jsonl(path)}
     errors: list[Error] = []
     for rec in read_jsonl(run_path):
         label = labels.get(rec["doc_id"])

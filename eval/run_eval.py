@@ -1,6 +1,6 @@
 """Run one system over the labeled set; write per-doc results, print a table, append history.
 
-Usage: uv run python eval/run_eval.py --system baseline [--tag v0]
+Usage: uv run python eval/run_eval.py --system baseline [--set main|hard] [--tag v0]
 """
 
 import argparse
@@ -13,13 +13,16 @@ from pathlib import Path
 
 from scoring import DocRecord, aggregate, score_fields
 
+from invoiceguard.cascade import cascade_extractor
 from invoiceguard.config import (
     DATA_DIR,
     HAIKU_MODEL,
+    HARD_LABELS_PATH,
     HISTORY_PATH,
     LABELS_PATH,
     REVIEWED_LABELS_PATH,
     RUNS_DIR,
+    SONNET_MODEL,
 )
 from invoiceguard.pipeline import (
     DocResult,
@@ -34,9 +37,11 @@ from invoiceguard.schema import SCALAR_FIELDS, LabelRow
 SYSTEMS: dict[str, Callable[[], Extractor]] = {
     "baseline": lambda: baseline_extractor,
     "haiku": lambda: llm_extractor(HAIKU_MODEL),
+    "sonnet": lambda: llm_extractor(SONNET_MODEL),
+    "cascade": cascade_extractor,
 }
-PLANNED_SYSTEMS = ("sonnet", "cascade")
-SYSTEM_MODELS = {"baseline": "regex", "haiku": HAIKU_MODEL}
+SYSTEM_MODELS = {"baseline": "regex", "haiku": HAIKU_MODEL, "sonnet": SONNET_MODEL,
+                 "cascade": f"{HAIKU_MODEL}->{SONNET_MODEL}"}
 HISTORY_KEYS = (
     "field_acc", "line_item_acc", "doc_exact", "review_recall", "reject_acc", "auto_approve",
     "grounding", "verified_wrong", "escalation_rate", "p50_ms", "p95_ms", "usd_per_doc", "n_docs",
@@ -100,13 +105,15 @@ def markdown_report(system: str, metrics: dict, reviewed: dict) -> str:
                       "Route confusion", "", *matrix])
 
 
-def write_outputs(system: str, tag: str, records: list[DocRecord], metrics: dict) -> Path:
+def write_outputs(system: str, label_set: str, tag: str, records: list[DocRecord],
+                  metrics: dict) -> Path:
     now = datetime.now(UTC)
     RUNS_DIR.mkdir(exist_ok=True)
-    run_path = RUNS_DIR / f"{now:%Y%m%dT%H%M%SZ}_{system}.jsonl"
+    suffix = "" if label_set == "main" else f"_{label_set}"
+    run_path = RUNS_DIR / f"{now:%Y%m%dT%H%M%SZ}_{system}{suffix}.jsonl"
     run_path.write_text("".join(json.dumps(asdict(r)) + "\n" for r in records))
     history = {"timestamp": now.isoformat(timespec="seconds"), "git_sha": git_sha(), "tag": tag,
-               "system": system, "model": SYSTEM_MODELS[system],
+               "system": system, "model": SYSTEM_MODELS[system], "set": label_set,
                **{k: metrics[k] for k in HISTORY_KEYS}}
     with HISTORY_PATH.open("a") as fh:
         fh.write(json.dumps(history) + "\n")
@@ -115,18 +122,20 @@ def write_outputs(system: str, tag: str, records: list[DocRecord], metrics: dict
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--system", required=True, choices=[*SYSTEMS, *PLANNED_SYSTEMS])
+    parser.add_argument("--system", required=True, choices=list(SYSTEMS))
+    parser.add_argument("--set", dest="label_set", choices=("main", "hard"), default="main")
     parser.add_argument("--tag", default="")
     args = parser.parse_args()
-    if args.system not in SYSTEMS:
-        raise SystemExit(f"--system {args.system} is not implemented yet")
 
-    gold, reviewed = load_labels(LABELS_PATH), load_labels(REVIEWED_LABELS_PATH)
-    records, _ = evaluate(SYSTEMS[args.system](), gold + reviewed, DATA_DIR)
-    main_metrics = aggregate([r for r in records if r.source == "synthetic"])
+    if args.label_set == "hard":
+        labels = load_labels(HARD_LABELS_PATH)
+    else:
+        labels = load_labels(LABELS_PATH) + load_labels(REVIEWED_LABELS_PATH)
+    records, _ = evaluate(SYSTEMS[args.system](), labels, DATA_DIR)
+    scored = aggregate([r for r in records if r.source == "synthetic"])
     reviewed_metrics = aggregate([r for r in records if r.source == "reviewer"])
-    run_path = write_outputs(args.system, args.tag, records, main_metrics)
-    print(markdown_report(args.system, main_metrics, reviewed_metrics))
+    run_path = write_outputs(args.system, args.label_set, args.tag, records, scored)
+    print(markdown_report(f"{args.system} ({args.label_set} set)", scored, reviewed_metrics))
     print(f"\nPer-doc results: {run_path}\nAppended: {HISTORY_PATH}")
 
 
