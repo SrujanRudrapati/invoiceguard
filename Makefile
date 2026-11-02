@@ -1,3 +1,6 @@
+SYSTEM ?= baseline
+TAG ?=
+
 .PHONY: setup data eval analyze api web demo test lint
 
 setup:
@@ -8,7 +11,7 @@ data:
 	uv run python scripts/make_synthetic.py
 
 eval:
-	uv run python eval/run_eval.py
+	uv run python eval/run_eval.py --system $(SYSTEM) --tag "$(TAG)"
 
 analyze:
 	uv run python eval/analyze.py

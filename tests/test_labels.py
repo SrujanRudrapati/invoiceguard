@@ -21,14 +21,6 @@ EXPECTED_COUNTS = {
 }
 
 
-@pytest.fixture(scope="module")
-def generated(tmp_path_factory: pytest.TempPathFactory) -> tuple[Path, list[LabelRow]]:
-    out = tmp_path_factory.mktemp("data")
-    generate(out / "docs", out / "labels.jsonl")
-    lines = (out / "labels.jsonl").read_text().splitlines()
-    return out, [LabelRow.model_validate_json(line) for line in lines]
-
-
 def pdf_text(data_dir: Path, row: LabelRow) -> str:
     with pdfplumber.open(data_dir / row.file) as pdf:
         return "\n".join(page.extract_text() or "" for page in pdf.pages)

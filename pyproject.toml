@@ -25,7 +25,8 @@ packages = ["src/invoiceguard"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src", "scripts"]
+pythonpath = ["src", "scripts", "eval"]
+markers = ["integration: end-to-end over generated PDFs"]
 
 [tool.ruff]
 line-length = 100

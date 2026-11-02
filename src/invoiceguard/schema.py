@@ -2,9 +2,11 @@
 
 from datetime import date
 from decimal import Decimal
-from typing import Literal
+from typing import Generic, Literal, TypeVar
 
 from pydantic import BaseModel, ConfigDict
+
+T = TypeVar("T")
 
 DocType = Literal["invoice", "not_invoice"]
 Route = Literal["approve", "review", "reject"]
@@ -52,6 +54,43 @@ class InvoiceFields(Strict):
     tax: Decimal | None = None
     total: Decimal | None = None
     line_items: tuple[LineItem, ...] = ()
+
+
+class Box(Strict):
+    """Rectangle in PDF points, origin top-left; page is 0-based."""
+
+    page: int
+    x0: float
+    top: float
+    x1: float
+    bottom: float
+
+
+class Extracted(Strict, Generic[T]):
+    value: T | None = None
+    evidence: str | None = None  # verbatim quote from the document
+    evidence_boxes: tuple[Box, ...] = ()
+
+
+class Invoice(Strict):
+    """System output: every scalar carries the quote that supports it."""
+
+    doc_type: DocType
+    vendor_name: Extracted[str] = Extracted[str]()
+    invoice_number: Extracted[str] = Extracted[str]()
+    invoice_date: Extracted[date] = Extracted[date]()
+    due_date: Extracted[date] = Extracted[date]()
+    po_number: Extracted[str] = Extracted[str]()
+    currency: Extracted[str] = Extracted[str]()
+    subtotal: Extracted[Decimal] = Extracted[Decimal]()
+    tax: Extracted[Decimal] = Extracted[Decimal]()
+    total: Extracted[Decimal] = Extracted[Decimal]()
+    line_items: tuple[LineItem, ...] = ()
+
+    def values(self) -> InvoiceFields:
+        """Drop evidence so output can be compared with labels."""
+        scalars = {name: getattr(self, name).value for name in SCALAR_FIELDS}
+        return InvoiceFields(doc_type=self.doc_type, line_items=self.line_items, **scalars)
 
 
 class LabelRow(Strict):
