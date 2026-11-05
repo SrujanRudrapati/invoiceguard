@@ -1,0 +1,10 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Three findings</title>
+<link rel="stylesheet" href="slide.css"></head><body>
+<h2>Three findings</h2>
+<div class="cols three">
+  <div class="card"><h3>Rules do the catching</h3><p class="big approve">2/6 &rarr; 6/6</p><p>bad invoices sent to review once rules were added. Regex plus rules also reaches 6/6.</p></div>
+  <div class="card"><h3>Sonnet: 20x the cost</h3><p class="big">$0.009983</p><p>per document, vs $0.000497 for the cascade. No routing decision changed on the 24 documents.</p></div>
+  <div class="card"><h3>The date bug</h3><p class="big review">3 &rarr; 0</p><p>wrong dates marked as verified, after reading date order from each document.</p></div>
+</div>
+<p class="foot">Main set, 24 synthetic documents. Numbers from make compare TAG=v3.1 and the v0 to v2 eval runs.</p>
+</body></html>

@@ -1,6 +1,6 @@
 # Decisions
 Times are H:MM of active work since the first commit (Nov 2, 1:53 PM), excluding the break from
-Nov 2, 3:48 PM to Nov 4. Entries I logged with a time keep it; entries first written with a "~"
+Nov 2, 3:48 PM to Nov 4, 10:08 PM. Entries I logged with a time keep it; entries first written with a "~"
 estimate now carry the elapsed time of the commit that first contains them (git timestamps), so
 they are an upper bound on when the decision was made.
 0:00 | Start | CLAUDE.md committed
@@ -74,3 +74,4 @@ they are an upper bound on when the decision was made.
 2:01 | SYSTEM=replay: recorded model responses (mocked) from the v4 cascade run, keyed by sha256 of document text; grounding, evidence boxes, rules and routing run live; $0; make demo picks it automatically without a key (DEMO_SYSTEM=auto) | require a key; mock the HTTP client | the brief says no paid service may be required; replaying parsed outputs keeps every downstream step real. Raw API payloads were never stored, so the recording is the parsed tool output | make eval SYSTEM=replay TAG=v4.1 printed field_acc 0.985, review 6/6, auto_approve 0.625, verified_wrong 0, reviewer n=1 0.778, $0 = the v4 cascade run
 2:01 | Replay is labelled "recorded model responses (mocked)" in the README, make demo/make eval output, and the app header (via GET /status) | label only in README | a reviewer must never mistake replayed answers for live model calls | test_status_reports_mocked_when_queue_came_from_replay
 2:08 | Break boundary = the "Pause: log break" commit (Nov 2, 3:48 PM, 1:55); fixed the user's leftover lines to commit times (removed 0:XX placeholder, Phase 2 done 0:35, two 1:05 -> 0:57, pause/resume 1:55 at 3:48 PM) and re-timed the v4.1 entries | break at 3:42 PM (Phase 8 commit, 1:48) | user's choice | git log --format=%at
+3:30 | Final: demo video link in README, demo scripts committed (scripts/demo/, no video or audio). Active time 3 h 30 min = 1 h 55 min Nov 2 (1:53-3:48 PM) + 1 h 35 min Nov 4 (10:08-11:43 PM) | - | - | git log --format=%at, tag final

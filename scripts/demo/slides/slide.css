@@ -1,0 +1,38 @@
+/* Demo slides: the review app's palette and IBM Plex Sans, sized for 1920x1080. */
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap");
+:root {
+  --ink: #1e2b3c; --ink-muted: #56647a; --paper: #eef3ef; --surface: #ffffff; --rule: #d5ded7;
+  --ledger: #7f9dbf; --ledger-deep: #3e5e82; --approve: #2e7a57; --review-deep: #8a5d10;
+  --reject: #a8432e;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--paper); color: var(--ink); font-family: "IBM Plex Sans", system-ui, sans-serif;
+  display: flex; flex-direction: column; justify-content: center; padding: 0 160px;
+  font-variant-numeric: tabular-nums;
+}
+h1 { font-size: 96px; font-weight: 600; margin: 0; letter-spacing: -1px; }
+h2 { font-size: 56px; font-weight: 600; margin: 0 0 48px; }
+.lede { font-size: 40px; color: var(--ink-muted); margin: 24px 0 0; max-width: 1400px; }
+.rule { height: 4px; width: 160px; background: var(--ledger); margin: 40px 0; }
+.cols { display: grid; gap: 48px; }
+.cols.three { grid-template-columns: repeat(3, 1fr); }
+.cols.two { grid-template-columns: 1fr 1fr; }
+.card { border-top: 4px solid var(--ledger); padding-top: 24px; }
+.card h3 { font-size: 36px; font-weight: 600; margin: 0 0 16px; }
+.card p, li { font-size: 28px; line-height: 1.45; margin: 0 0 12px; }
+/* scoped under .card so they beat .card p */
+.card .muted, .muted { color: var(--ink-muted); }
+.card .big { font-size: 64px; font-weight: 600; line-height: 1.1; margin: 8px 0; }
+.card .approve { color: var(--approve); } .card .review { color: var(--review-deep); }
+ul { margin: 0; padding-left: 32px; }
+.log { font-size: 24px; line-height: 1.6; }
+.log b { color: var(--ledger-deep); display: inline-block; width: 90px; }
+.todo { color: var(--reject); font-weight: 600; }
+.foot { position: fixed; bottom: 48px; left: 160px; font-size: 22px; color: var(--ink-muted); }
+.card.stop { margin-top: 56px; }
+.card.stop ul.cols { gap: 8px 48px; padding-left: 32px; }
+.why { margin-top: 72px; }
+.why h3 { font-size: 36px; font-weight: 600; margin: 0; }
+.why .lede { margin-top: 12px; color: var(--ink); }
