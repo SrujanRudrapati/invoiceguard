@@ -3,7 +3,7 @@ SET ?= main
 DEMO_SYSTEM ?= auto
 TAG ?=
 
-.PHONY: setup data eval compare analyze api web demo test lint
+.PHONY: setup data eval compare analyze api web demo serve test lint
 
 setup:
 	uv sync
@@ -31,6 +31,10 @@ web:
 demo:
 	uv run python -m invoiceguard.process --system $(DEMO_SYSTEM)
 	$(MAKE) -j2 api web
+
+serve:  # production mode: built web app at /, API at /api, one port
+	cd web && npm run build
+	uv run uvicorn invoiceguard.serve:create_app --factory --port $${PORT:-8000}
 
 test:
 	uv run pytest -q

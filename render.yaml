@@ -1,0 +1,9 @@
+# Render blueprint: one free web service built from the Dockerfile. No API key: the demo runs
+# in replay mode (recorded model responses, mocked), labeled as such in the app header.
+services:
+  - type: web
+    name: invoiceguard-srujan
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health

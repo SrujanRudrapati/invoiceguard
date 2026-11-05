@@ -1,0 +1,15 @@
+.git
+.env
+.venv
+.DS_Store
+**/__pycache__
+.pytest_cache
+.ruff_cache
+.playwright-mcp
+web/node_modules
+web/dist
+web/tsconfig.tsbuildinfo
+data/*.sqlite3
+runs/*
+!runs/history.jsonl
+demo

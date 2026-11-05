@@ -2,6 +2,12 @@
 
 Demo video: https://youtu.be/xz2qOKqY8nk
 
+Live demo: LIVE_DEMO_URL (TODO: Render URL). The hosted demo uses **recorded model responses
+(mocked)**, so no API key is needed, and it runs on Render's free tier: it resets to the original
+24 documents when idle, and the first visit may take about a minute while it wakes up.
+Run the same build locally with `make serve` (http://localhost:8000) or `docker build -t
+invoiceguard . && docker run -p 8000:8000 invoiceguard`.
+
 Invoice extraction with evidence, business-rule checks, a Haiku → Sonnet cascade, and a
 keyboard-driven review desk where every correction becomes a test case.
 
