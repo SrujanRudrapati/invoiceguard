@@ -19,6 +19,7 @@ from invoiceguard import review, rules, store
 from invoiceguard.config import DATA_DIR, DB_PATH, HISTORY_PATH, REVIEWED_LABELS_PATH
 from invoiceguard.grounding import verify_invoice
 from invoiceguard.ingest import load_document
+from invoiceguard.replay import REPLAY_LABEL
 from invoiceguard.schema import SCALAR_FIELDS, Invoice, field_label
 
 log = logging.getLogger(__name__)
@@ -62,6 +63,13 @@ def queue_item(row: sqlite3.Row) -> dict:
             "review_action": row["review_action"], "vendor": values.vendor_name,
             "total": None if values.total is None else str(values.total),
             "currency": values.currency, "reasons": json.loads(row["reasons_json"])}
+
+
+@app.get("/status")
+def get_status(conn: Conn) -> dict:
+    """Which systems produced the current queue; the app labels replay as mocked."""
+    systems = store.systems_used(conn)
+    return {"systems": systems, "mocked": "replay" in systems, "mocked_label": REPLAY_LABEL}
 
 
 @app.get("/queue")

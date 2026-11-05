@@ -92,6 +92,12 @@ export interface Evals {
 
 export type Edits = Record<string, string | null>;
 
+export interface SystemStatus {
+  systems: string[];
+  mocked: boolean;
+  mocked_label: string;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`/api${path}`, {
     headers: { "Content-Type": "application/json" },
@@ -117,4 +123,5 @@ export const api = {
   reject: (id: string) =>
     request<Decision>(`/docs/${encodeURIComponent(id)}/reject`, { method: "POST" }),
   evals: () => request<Evals>("/evals"),
+  systemStatus: () => request<SystemStatus>("/status"),
 };

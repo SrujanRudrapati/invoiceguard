@@ -22,6 +22,7 @@ from invoiceguard.config import (
     MissingAPIKeyError,
 )
 from invoiceguard.pipeline import DocResult, Extractor, run_document
+from invoiceguard.replay import RECORDED_PATH, REPLAY_LABEL
 from invoiceguard.schema import SCALAR_FIELDS, LabelRow
 from invoiceguard.systems import SYSTEM_MODELS, SYSTEMS
 
@@ -122,7 +123,10 @@ def main() -> None:
     scored = aggregate([r for r in records if r.source == "synthetic"])
     reviewed_metrics = aggregate([r for r in records if r.source == "reviewer"])
     run_path = write_outputs(args.system, args.label_set, args.tag, records, scored)
-    print(markdown_report(f"{args.system} ({args.label_set} set)", scored, reviewed_metrics))
+    title = f"{args.system} ({args.label_set} set)"
+    if args.system == "replay":
+        title += f": {REPLAY_LABEL}, {RECORDED_PATH.name}, $0 spent"
+    print(markdown_report(title, scored, reviewed_metrics))
     print(f"\nPer-doc results: {run_path}\nAppended: {HISTORY_PATH}")
 
 

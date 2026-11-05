@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { ReviewDesk } from "./review/ReviewDesk";
+import { api } from "./api";
 import { Toast, type ToastMessage } from "./Toast";
 
 type Page = "review" | "evals";
@@ -14,6 +15,14 @@ function pageFromHash(): Page {
 export function App() {
   const [page, setPage] = useState<Page>(pageFromHash);
   const [toast, setToast] = useState<ToastMessage | null>(null);
+  const [mockedLabel, setMockedLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    api
+      .systemStatus()
+      .then((s) => setMockedLabel(s.mocked ? s.mocked_label : null))
+      .catch(() => setMockedLabel(null)); // the desk shows its own API error
+  }, []);
 
   useEffect(() => {
     const onHash = () => setPage(pageFromHash());
@@ -45,6 +54,11 @@ export function App() {
     <div className="flex h-full flex-col">
       <header className="flex h-12 shrink-0 items-center border-b border-rule bg-surface px-5">
         <span className="text-body font-semibold">InvoiceGuard</span>
+        {mockedLabel && (
+          <span className="ml-3 rounded bg-review-tint px-2 py-0.5 text-meta text-review-deep">
+            Demo data: {mockedLabel}
+          </span>
+        )}
         <nav aria-label="Main" className="ml-auto flex">
           {link("review", "Review")}
           {link("evals", "Evals")}

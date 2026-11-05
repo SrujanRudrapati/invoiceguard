@@ -132,5 +132,5 @@ def test_prompt_treats_credit_notes_as_billing_documents():
 
 def test_missing_key_is_a_typed_error_with_a_way_forward(monkeypatch):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    with pytest.raises(config.MissingAPIKeyError, match="DEMO_SYSTEM=baseline"):
+    with pytest.raises(config.MissingAPIKeyError, match="SYSTEM=replay"):
         extract_llm.make_client()

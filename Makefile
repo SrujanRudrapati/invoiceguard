@@ -1,6 +1,6 @@
 SYSTEM ?= baseline
 SET ?= main
-DEMO_SYSTEM ?= cascade
+DEMO_SYSTEM ?= auto
 TAG ?=
 
 .PHONY: setup data eval compare analyze api web demo test lint

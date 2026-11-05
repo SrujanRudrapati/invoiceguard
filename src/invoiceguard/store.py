@@ -160,3 +160,8 @@ def audit_for(conn: sqlite3.Connection, doc_id: str) -> list[sqlite3.Row]:
         """,
         (doc_id, doc_id),
     ).fetchall()
+
+
+def systems_used(conn: sqlite3.Connection) -> list[str]:
+    return [row["system"] for row in
+            conn.execute("SELECT DISTINCT system FROM extractions ORDER BY system").fetchall()]

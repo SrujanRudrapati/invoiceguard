@@ -49,9 +49,13 @@ class MissingAPIKeyError(RuntimeError):
 
 
 MISSING_KEY_HELP = (
-    "ANTHROPIC_API_KEY is not set. Copy .env.example to .env and add your key, "
-    "or use the free regex system (SYSTEM=baseline / DEMO_SYSTEM=baseline)."
+    "ANTHROPIC_API_KEY is not set. Copy .env.example to .env and add your key, or run free: "
+    "SYSTEM=replay (recorded model responses, mocked) or SYSTEM=baseline (regex)."
 )
+
+
+def has_api_key() -> bool:
+    return bool(os.environ.get("ANTHROPIC_API_KEY"))
 
 
 def anthropic_api_key() -> str:

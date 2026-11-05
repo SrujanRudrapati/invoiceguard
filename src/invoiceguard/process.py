@@ -1,6 +1,6 @@
 """Reset the DB and process every PDF in data/docs with one system.
 
-Usage: uv run python -m invoiceguard.process [--system cascade]
+Usage: uv run python -m invoiceguard.process [--system auto|cascade|replay|baseline|...]
 """
 
 import argparse
@@ -9,8 +9,9 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from invoiceguard import store
-from invoiceguard.config import DATA_DIR, DB_PATH, DOCS_DIR, MissingAPIKeyError
+from invoiceguard.config import DATA_DIR, DB_PATH, DOCS_DIR, MissingAPIKeyError, has_api_key
 from invoiceguard.pipeline import run_document
+from invoiceguard.replay import RECORDED_PATH, REPLAY_LABEL
 from invoiceguard.systems import SYSTEMS
 
 log = logging.getLogger(__name__)
@@ -34,17 +35,28 @@ def process(system: str, db_path: Path = DB_PATH, docs_dir: Path = DOCS_DIR) -> 
     return counts
 
 
+def resolve_system(requested: str) -> str:
+    """auto = the live cascade when a key is set, otherwise the free replay."""
+    if requested != "auto":
+        return requested
+    return "cascade" if has_api_key() else "replay"
+
+
 def main() -> None:
     logging.basicConfig(level=logging.WARNING)
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--system", choices=list(SYSTEMS), default="cascade")
+    parser.add_argument("--system", choices=["auto", *SYSTEMS], default="auto")
     args = parser.parse_args()
+    system = resolve_system(args.system)
+    if system == "replay":
+        why = " (no ANTHROPIC_API_KEY set)" if args.system == "auto" else ""
+        print(f"Using {REPLAY_LABEL}{why}: {RECORDED_PATH.relative_to(DATA_DIR.parent)}")
     try:
-        counts = process(args.system)
+        counts = process(system)
     except MissingAPIKeyError as exc:
         raise SystemExit(str(exc)) from exc
     summary = ", ".join(f"{n} {route}" for route, n in sorted(counts.items()))
-    print(f"Processed {sum(counts.values())} documents with {args.system}: {summary}")
+    print(f"Processed {sum(counts.values())} documents with {system}: {summary}")
 
 
 if __name__ == "__main__":
