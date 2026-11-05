@@ -1,6 +1,6 @@
 # Decisions
 Times are H:MM of active work since the first commit (Nov 2, 1:53 PM), excluding the break from
-Nov 2, 3:42 PM to Nov 4. Entries I logged with a time keep it; entries first written with a "~"
+Nov 2, 3:48 PM to Nov 4. Entries I logged with a time keep it; entries first written with a "~"
 estimate now carry the elapsed time of the commit that first contains them (git timestamps), so
 they are an upper bound on when the decision was made.
 0:00 | Start | CLAUDE.md committed
@@ -12,9 +12,8 @@ they are an upper bound on when the decision was made.
 0:25 | Money as Decimal, serialized as strings in JSONL | float | exact sums in rule checks | schema.py
 0:25 | Messy docs: abbreviated labels, "03 Nov 2026" dates, currency symbols, Amt Due also in header | messy = visual noise only | harder text, same truth | data/docs
 0:25 | Fixed seed + reportlab invariant=1 | random per run | byte-identical PDFs across reruns | test_generation_is_deterministic
-0:XX | Phase 1 done | 24 docs, 24 labels
 0:25 | Phase 1 done | 24 docs, 24 labels
-0:27 | Phase 2 done | baseline table printed
+0:35 | Phase 2 done | baseline table printed
 0:35 | Extracted[T] = {value, evidence, evidence_boxes} for scalars; line items plain | evidence per line item | spec; keeps LLM output small | schema.py
 0:35 | Ingest via page.get_textmap(): text + 1 box per char | re-derive boxes from words | identical to extract_text(), so regex/LLM spans map straight to boxes | test_text_and_boxes_align_on_every_generated_doc
 0:35 | Grounding = normalized-exact quote found in text; value-in-quote not checked yet | also check value appears in quote | as specified; note an LLM could quote "Total: 6,447.00" and answer 0 and still be grounded | test_grounding.py
@@ -36,8 +35,8 @@ they are an upper bound on when the decision was made.
 0:47 | Prices confirmed: Haiku 5.5 $0.10/$0.50, Sonnet 5.5 $2/$10 per 1M (claude-api skill table cached 2026-10-06) | live pricing page | approved skill; re-check before final run | config.py
 0:47 | Re-ran regex baseline under the same rules: also 6/6 review caught | compare haiku to pre-rules baseline (2/6) | recall gain comes from rules; haiku's gain is field_acc 0.879 -> 0.985 and auto_approve 0.500 -> 0.625 | runs/history.jsonl v1 rows
 0:47 | OPEN (resolved at 0:57 in v2, see below): grounding accepted either reading of slash dates; Haiku read 2 receipt dates day-first and they verified | - | needed a decision | doc_015, doc_020
-1:05 | Sonnet keeps thinking {"type":"between_tools"} | {"type":"disabled"} | live check with our tool: disabled -> 400 "To turn thinking off on this model, send between_tools"; between_tools accepted | one-off call, 2026-11-02
-1:05 | Per-doc eval records now store evidence quotes; re-ran haiku as tag v1-analysis for the error analysis | analyze the v1 run (had no evidence) | analysis must show evidence | v1-analysis: same 4 date-format errors as v1
+0:57 | Sonnet keeps thinking {"type":"between_tools"} | {"type":"disabled"} | live check with our tool: disabled -> 400 "To turn thinking off on this model, send between_tools"; between_tools accepted | one-off call, 2026-11-02
+0:57 | Per-doc eval records now store evidence quotes; re-ran haiku as tag v1-analysis for the error analysis | analyze the v1 run (had no evidence) | analysis must show evidence | v1-analysis: same 4 date-format errors as v1
 0:57 | Phase 4 fix: slash-date order resolved per document (any part > 12 fixes MDY/DMY for the whole page); if none, date field is unverified with "Ambiguous date 10/05/2026 (MM/DD or DD/MM)" and flagged ambiguous (will not escalate) | accept either reading (v1); locale-by-currency; prompt hint | the ambiguity is in the document, so no model can resolve it; counts: 18 docs no slash dates, 4 resolved (all MDY), 2 all-ambiguous (doc_015, doc_020) | before (v1-analysis) -> after (v2): verified_wrong 3 -> 0, grounding 1.000 -> 0.984, field_acc 0.985 -> 0.985, review 6/6 -> 6/6, auto_approve 0.625 -> 0.625, $0.00049/doc both
 0:57 | Known false review: doc_015 stays gold approve but routes to review (all-ambiguous dates) | relabel to review | user decision: never change gold data to match the system | runs/20261102T214938Z_haiku.jsonl
 0:57 | New metric verified_wrong = fields grounding marked verified whose value is wrong (the errors a clerk would not see) | rely on grounding rate | grounding 1.000 in v1 hid 3 wrong dates | test_verified_wrong_counts_only_verified_fields_with_wrong_values
@@ -69,8 +68,9 @@ they are an upper bound on when the decision was made.
 1:48 | Missing ANTHROPIC_API_KEY is a typed MissingAPIKeyError; process/run_eval print one line naming the fix and the free DEMO_SYSTEM/SYSTEM=baseline option; extractor is built before the DB reset | traceback (was) | fresh clone without .env: make demo died with a traceback AND deleted the previous demo DB first | test_missing_key_leaves_existing_db_untouched
 1:48 | /evals "latest" = newest tagged run; untagged runs (make eval without TAG) stay in history only | latest = last row | fresh clone's untagged baseline run made the Evals page show "Latest run" blank with one system | test_evals_latest_ignores_untagged_runs
 1:48 | README drafted from the user's template: numbers only from make compare TAG=v3.1 and the v4 cascade run (reviewer set n=1, field_acc 0.778); "x% of good ones" filled as 15 of 16 (94%) from the run's route confusion, not the auto_approve metric (0.625 = share of all 24 docs); own-words sections left as TODO | - | user rule: never invent metrics | runs/20261102T220823Z_cascade.jsonl, runs/20261102T222929Z_cascade.jsonl
-1:42 | Paused at 3:42 PM for a break
-1:42 | Resumed Nov 4 after illness (paused Nov 2, 3:42 PM)
-1:54 | Times above: "~" estimates replaced with git commit times (elapsed since first commit, break excluded), method stated at the top of this file | keep estimates | the estimates were off by up to 1h (e.g. ~2:45 vs 1:48 at commit) | git log --format=%at
-1:54 | SYSTEM=replay: recorded model responses (mocked) from the v4 cascade run, keyed by sha256 of document text; grounding, evidence boxes, rules and routing run live; $0; make demo picks it automatically without a key (DEMO_SYSTEM=auto) | require a key; mock the HTTP client | the brief says no paid service may be required; replaying parsed outputs keeps every downstream step real. Raw API payloads were never stored, so the recording is the parsed tool output | make eval SYSTEM=replay TAG=v4.1 printed field_acc 0.985, review 6/6, auto_approve 0.625, verified_wrong 0, reviewer n=1 0.778, $0 = the v4 cascade run
-1:54 | Replay is labelled "recorded model responses (mocked)" in the README, make demo/make eval output, and the app header (via GET /status) | label only in README | a reviewer must never mistake replayed answers for live model calls | test_status_reports_mocked_when_queue_came_from_replay
+1:55 | Paused at 3:48 PM for a break
+1:55 | Resumed Nov 4 after illness (paused Nov 2, 3:48 PM)
+2:01 | Times above: "~" estimates replaced with git commit times (elapsed since first commit, break excluded), method stated at the top of this file | keep estimates | the estimates were off by up to 1h (e.g. ~2:45 vs 1:48 at commit) | git log --format=%at
+2:01 | SYSTEM=replay: recorded model responses (mocked) from the v4 cascade run, keyed by sha256 of document text; grounding, evidence boxes, rules and routing run live; $0; make demo picks it automatically without a key (DEMO_SYSTEM=auto) | require a key; mock the HTTP client | the brief says no paid service may be required; replaying parsed outputs keeps every downstream step real. Raw API payloads were never stored, so the recording is the parsed tool output | make eval SYSTEM=replay TAG=v4.1 printed field_acc 0.985, review 6/6, auto_approve 0.625, verified_wrong 0, reviewer n=1 0.778, $0 = the v4 cascade run
+2:01 | Replay is labelled "recorded model responses (mocked)" in the README, make demo/make eval output, and the app header (via GET /status) | label only in README | a reviewer must never mistake replayed answers for live model calls | test_status_reports_mocked_when_queue_came_from_replay
+2:08 | Break boundary = the "Pause: log break" commit (Nov 2, 3:48 PM, 1:55); fixed the user's leftover lines to commit times (removed 0:XX placeholder, Phase 2 done 0:35, two 1:05 -> 0:57, pause/resume 1:55 at 3:48 PM) and re-timed the v4.1 entries | break at 3:42 PM (Phase 8 commit, 1:48) | user's choice | git log --format=%at

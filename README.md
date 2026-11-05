@@ -6,7 +6,7 @@ keyboard-driven review desk where every correction becomes a test case.
 On 24 labeled invoices it catches 6/6 bad invoices before approval (regex alone: 2/6),
 auto-approves 15 of 16 (94%) good ones, and marks zero wrong values as verified, at $0.0005/doc.
 Sonnet alone costs ~20x more and changed no routing decision, so the cascade escalates rarely.
-Built in 1 h 55 min (1 h 48 min on Nov 2, 6 min on Nov 4) of active work so far; tags v0–v4.1 show each step.
+Built in 2 h 8 min (1 h 55 min on Nov 2, 13 min on Nov 4) of active work so far; tags v0–v4.1 show each step.
 
 ![Review desk: selected field linked to its evidence](docs/review-desk.png)
 
