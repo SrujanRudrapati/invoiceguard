@@ -10,3 +10,4 @@ data/*.sqlite3
 web/dist/
 .playwright-mcp/
 web/tsconfig.tsbuildinfo
+/demo/

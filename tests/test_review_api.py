@@ -106,14 +106,17 @@ def test_api_maps_errors_to_status_codes(seeded):
             twice.value.status_code) == (404, 422, 409)
 
 
-def test_evals_latest_ignores_untagged_runs(tmp_path, monkeypatch):
-    rows = [{"tag": "v4", "system": "haiku", "set": "main"},
+def test_evals_latest_is_newest_tagged_row_per_system(tmp_path, monkeypatch):
+    rows = [{"tag": "v3.1", "system": "haiku", "set": "main"},
+            {"tag": "v3.1", "system": "cascade", "set": "main"},
             {"tag": "v4", "system": "cascade", "set": "main"},
-            {"tag": "", "system": "baseline", "set": "main"}]
+            {"tag": "v4.1", "system": "replay", "set": "main"},
+            {"tag": "", "system": "haiku", "set": "main"}]
     path = tmp_path / "history.jsonl"
     path.write_text("".join(json.dumps(r) + "\n" for r in rows))
     monkeypatch.setattr(api, "HISTORY_PATH", path)
     evals = api.get_evals()
-    assert evals["latest_tag"] == "v4"
-    assert {r["system"] for r in evals["latest"]} == {"haiku", "cascade"}
-    assert len(evals["history"]) == 3
+    assert evals["latest_tag"] == "v4.1"
+    latest = {r["system"]: r["tag"] for r in evals["latest"]}
+    assert latest == {"haiku": "v3.1", "cascade": "v4", "replay": "v4.1"}
+    assert len(evals["history"]) == 5

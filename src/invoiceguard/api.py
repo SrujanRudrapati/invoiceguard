@@ -157,15 +157,13 @@ def read_history(path: Path) -> list[dict]:
 
 @app.get("/evals")
 def get_evals() -> dict:
-    """All history rows, plus the latest tag's row per (set, system) for the results table.
+    """All history rows, plus the newest tagged row per (set, system) for charts and table.
 
-    Untagged runs (make eval without TAG) stay in history but never become "latest".
+    Per system, not per tag: a tag that re-ran one system (v4.1 replay) must not hide the
+    others. Untagged runs (make eval without TAG) stay in history but never become "latest".
     """
     history = read_history(HISTORY_PATH)
-    tagged = [row["tag"] for row in history if row.get("tag")]
-    latest_tag = tagged[-1] if tagged else None
-    latest = {}
-    for row in history:
-        if row["tag"] == latest_tag:
-            latest[f'{row.get("set", "main")}/{row["system"]}'] = row
+    tagged = [row for row in history if row.get("tag")]
+    latest_tag = tagged[-1]["tag"] if tagged else None
+    latest = {f'{row.get("set", "main")}/{row["system"]}': row for row in tagged}
     return {"latest_tag": latest_tag, "latest": list(latest.values()), "history": history}

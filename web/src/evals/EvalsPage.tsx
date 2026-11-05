@@ -19,6 +19,8 @@ const SYSTEMS = [
   { key: "sonnet", label: "Sonnet", color: "#1e2b3c" },
   { key: "cascade", label: "Cascade", color: "#3e5e82" },
 ];
+// Replay re-scores recorded answers, so it shares a table row but never a chart point.
+const TABLE_SYSTEMS = [...SYSTEMS, { key: "replay", label: "Replay (recorded, mocked)", color: "#56647a" }];
 const FREE_FLOOR = 0.000001; // log axes cannot show $0
 const AXIS = { fontSize: 13, fill: "#56647a" };
 
@@ -66,6 +68,7 @@ function ResultsTable({ rows, title }: { rows: HistoryRow[]; title: string }) {
         <thead className="text-meta text-ink-muted">
           <tr className="border-b border-rule">
             <th className="py-2 text-left font-normal">System</th>
+            <th className="py-2 text-left font-normal">Tag</th>
             <th className="money py-2 font-normal">Field accuracy</th>
             <th className="money py-2 font-normal">Review recall</th>
             <th className="money py-2 font-normal">Auto-approve</th>
@@ -76,12 +79,13 @@ function ResultsTable({ rows, title }: { rows: HistoryRow[]; title: string }) {
           </tr>
         </thead>
         <tbody>
-          {SYSTEMS.map((s) => {
+          {TABLE_SYSTEMS.map((s) => {
             const r = rows.find((row) => row.system === s.key);
             if (!r) return null;
             return (
               <tr key={s.key} className="border-b border-rule">
                 <td className="py-2">{s.label}</td>
+                <td className="py-2 text-ink-muted">{r.tag}</td>
                 <td className="money py-2">{pct(r.field_acc)}</td>
                 <td className="money py-2">{pct(r.review_recall)}</td>
                 <td className="money py-2">{pct(r.auto_approve)}</td>
@@ -116,7 +120,8 @@ export function EvalsPage() {
       <div className="mx-auto max-w-5xl px-8 py-8">
         <h1 className="text-display font-semibold">Evals</h1>
         <p className="mt-1 text-meta text-ink-muted">
-          Latest run {evals.latest_tag}, main set of 24 documents unless noted.
+          Newest tagged result for each system (tag in the table), main set of 24 documents
+          unless noted.
         </p>
 
         <div className="mt-8 grid grid-cols-2 gap-10 max-lg:grid-cols-1">
