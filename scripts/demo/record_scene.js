@@ -6,7 +6,8 @@
 // Returns { scene, video, leadMs, seconds, syncMarker }: the scene starts right after the
 // magenta sync marker's last frame (leadMs is the wall-clock estimate); keep `seconds`.
 async (page) => {
-  const ROOT = "/Users/srujan/invoiceguard";
+  // Paths are relative to the project root: the Playwright MCP runs this in a vm with no
+  // __dirname, and resolves relative paths against the workspace root (as it does filename=).
   const APP = "http://localhost:5173/";
   const SLIDES = "http://localhost:5180/"; // python -m http.server 5180 -d scripts/demo/slides
   const KEY_GAP_MS = 700; // pause after every key, for narration
@@ -45,7 +46,7 @@ async (page) => {
   const secondsOverride = params.has("seconds") ? Number(params.get("seconds")) : null;
   const ctx = await page.context().browser().newContext({
     viewport: { width: 1920, height: 1080 },
-    recordVideo: { dir: `${ROOT}/demo/raw`, size: { width: 1920, height: 1080 } },
+    recordVideo: { dir: "demo/raw", size: { width: 1920, height: 1080 } },
   });
   const recordingStart = Date.now();
   await ctx.addInitScript(HARNESS);
